@@ -1,9 +1,10 @@
+#![allow(unused_macros)]
 use rand::random;
 use std::{collections::HashMap, sync::mpsc, thread};
 macro_rules! simulate_delay {
     () => {
         if random::<bool>() {
-            thread::sleep(std::time::Duration::from_millis(10));
+            thread::sleep(std::time::Duration::from_millis(50));
         }
     };
 }
@@ -13,7 +14,6 @@ fn initiate(buyer_transmit: mpsc::Sender<(i32, String)>, available: &HashMap<i32
         let name = name.clone();
         let tx = buyer_transmit.clone();
         thread::spawn(move || {
-            simulate_delay!();
             tx.send((id, name)).unwrap();
         });
     }
@@ -29,7 +29,6 @@ fn offer(
         let price = prices[&recieved];
         let tx = seller_transmit.clone();
         thread::spawn(move || {
-            simulate_delay!();
             tx.send((recieved.1, price)).unwrap();
         });
     }
@@ -43,21 +42,49 @@ fn decide_offer(
         println!("Price for request {:?} is: {}", recieved.0, recieved.1);
         let tx = buyer_confirm.clone();
         thread::spawn(move || {
-            simulate_delay!();
             tx.send((recieved.0, random::<bool>())).unwrap();
         });
     }
 }
 fn confirm(seller_handle: mpsc::Receiver<(String, bool)>) {
+    let mut offer_handles = vec![];
     for recieved in seller_handle {
-        simulate_delay!();
-        let choice = if recieved.1 { "Accepted" } else { "Rejected" };
-        println!("Request {:?} was {}", recieved.0, choice);
+        let (name, accepted) = recieved;
+        let choice = if accepted { "Accepted" } else { "Rejected" };
+        println!("Request {:?} was {}", name, choice);
+        if accepted {
+            offer_handles.push(thread::spawn(move || {
+                flexible_offer(name);
+            }));
+        }
+    }
+    offer_handles.into_iter().for_each(|handle| handle.join().unwrap());
+}
+
+fn flexible_offer(item: String) {
+    let (shipper_transmit, buyer_recieve) = mpsc::channel();
+    let (payment_request, payment_confirm) = mpsc::channel();
+    shipper_transmit.send(item.clone()).unwrap();
+    payment_request.send(item.clone()).unwrap();
+
+    match (try_ship(buyer_recieve).join(), try_pay(payment_confirm).join()) {
+        (Ok(_), Ok(_)) => println!("{:?} shipped and paid for", item),
+        (Err(_), Ok(_)) => println!("Shipping failed"),
+        (Ok(_), Err(_)) => println!("Payment failed"),
+        (Err(_), Err(_)) => println!("Shipping and payment failed"),
     }
 }
 
-fn flexible_offer() {
-    todo!()
+fn try_ship(buyer_recieve: mpsc::Receiver<String>) -> thread::JoinHandle<()> {
+    thread::spawn(move || {
+        println!("{:?} shipped", buyer_recieve.recv().unwrap());
+    })
+}
+
+fn try_pay(payment_request: mpsc::Receiver<String>) -> thread::JoinHandle<()> {
+    thread::spawn(move || {
+        println!("{:?} paid for", payment_request.recv().unwrap());
+    })
 }
 
 fn main() {
