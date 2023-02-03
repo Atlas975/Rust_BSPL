@@ -7,7 +7,7 @@ macro_rules! simulate_delay {
         }
     };
 }
-fn request_price(buyer_transmit: mpsc::Sender<(i32, String)>, available: &HashMap<i32, String>) {
+fn initiate(buyer_transmit: mpsc::Sender<(i32, String)>, available: &HashMap<i32, String>) {
     for (&id, name) in available.iter() {
         let name = name.clone();
         let tx = buyer_transmit.clone();
@@ -19,7 +19,7 @@ fn request_price(buyer_transmit: mpsc::Sender<(i32, String)>, available: &HashMa
 }
 
 
-fn send_prices(
+fn offer(
     seller_recieve: mpsc::Receiver<(i32, String)>,
     seller_transmit: mpsc::Sender<(String, i32)>,
     prices: &HashMap<(i32, String), i32>,
@@ -35,7 +35,7 @@ fn send_prices(
     }
 }
 
-fn request_confirmation(buyer_recieve: mpsc::Receiver<(String, i32)>, buyer_confirm: mpsc::Sender<(String, bool)>) {
+fn decide_offer(buyer_recieve: mpsc::Receiver<(String, i32)>, buyer_confirm: mpsc::Sender<(String, bool)>) {
     for recieved in buyer_recieve {
         println!("Price for request {:?} is: {}", recieved.0, recieved.1);
         let tx = buyer_confirm.clone();
@@ -45,7 +45,7 @@ fn request_confirmation(buyer_recieve: mpsc::Receiver<(String, i32)>, buyer_conf
         });
     }
 }
-fn finalise_order(seller_handle: mpsc::Receiver<(String, bool)>) {
+fn confirm(seller_handle: mpsc::Receiver<(String, bool)>) {
     for recieved in seller_handle {
         simulate_delay!();
         let choice = if recieved.1 { "Accepted" } else { "Rejected" };
@@ -70,19 +70,19 @@ fn main() {
         .collect::<HashMap<_, _>>();
 
     let get_prices = thread::spawn(move || {
-        request_price(buyer_transmit, &available);
+        initiate(buyer_transmit, &available);
     });
 
     let get_confirmation = thread::spawn(move || {
-        send_prices(seller_recieve, seller_transmit, &prices);
+        offer(seller_recieve, seller_transmit, &prices);
     });
 
     let confirm_order = thread::spawn(move || {
-        request_confirmation(buyer_recieve, buyer_confirm);
+        decide_offer(buyer_recieve, buyer_confirm);
     });
 
     let finalise = thread::spawn(move || {
-        finalise_order(seller_handle);
+        confirm(seller_handle);
     });
 
     get_prices.join().unwrap();
@@ -90,4 +90,3 @@ fn main() {
     confirm_order.join().unwrap();
     finalise.join().unwrap();
 }
-// Attempts to implement protocols from the BSPL paper https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=a1475c0797f309ba01945e3c4bcc541d598b766c
