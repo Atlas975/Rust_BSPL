@@ -7,6 +7,7 @@ macro_rules! simulate_delay {
         }
     };
 }
+
 fn initiate(buyer_transmit: mpsc::Sender<(i32, String)>, available: &HashMap<i32, String>) {
     for (&id, name) in available.iter() {
         let name = name.clone();
@@ -17,7 +18,6 @@ fn initiate(buyer_transmit: mpsc::Sender<(i32, String)>, available: &HashMap<i32
         });
     }
 }
-
 
 fn offer(
     seller_recieve: mpsc::Receiver<(i32, String)>,
@@ -90,3 +90,4 @@ fn main() {
     confirm_order.join().unwrap();
     finalise.join().unwrap();
 }
+
