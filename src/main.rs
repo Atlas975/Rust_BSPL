@@ -1,5 +1,5 @@
-use std::{collections::HashMap, sync::mpsc, thread};
 use rand::random;
+use std::{collections::HashMap, sync::mpsc, thread};
 macro_rules! simulate_delay {
     () => {
         if random::<bool>() {
@@ -35,7 +35,10 @@ fn offer(
     }
 }
 
-fn decide_offer(buyer_recieve: mpsc::Receiver<(String, i32)>, buyer_confirm: mpsc::Sender<(String, bool)>) {
+fn decide_offer(
+    buyer_recieve: mpsc::Receiver<(String, i32)>,
+    buyer_confirm: mpsc::Sender<(String, bool)>,
+) {
     for recieved in buyer_recieve {
         println!("Price for request {:?} is: {}", recieved.0, recieved.1);
         let tx = buyer_confirm.clone();
@@ -51,6 +54,10 @@ fn confirm(seller_handle: mpsc::Receiver<(String, bool)>) {
         let choice = if recieved.1 { "Accepted" } else { "Rejected" };
         println!("Request {:?} was {}", recieved.0, choice);
     }
+}
+
+fn flexible_offer() {
+    todo!()
 }
 
 fn main() {
@@ -90,4 +97,3 @@ fn main() {
     confirm_order.join().unwrap();
     finalise.join().unwrap();
 }
-
