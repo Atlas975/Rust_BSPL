@@ -46,6 +46,7 @@ fn decide_offer(
         });
     }
 }
+
 fn confirm(seller_handle: mpsc::Receiver<(String, bool)>) {
     let mut offer_handles = vec![];
     for recieved in seller_handle {
@@ -58,7 +59,9 @@ fn confirm(seller_handle: mpsc::Receiver<(String, bool)>) {
             }));
         }
     }
-    offer_handles.into_iter().for_each(|handle| handle.join().unwrap());
+    offer_handles
+        .into_iter()
+        .for_each(|handle| handle.join().unwrap());
 }
 
 fn flexible_offer(item: String) {
@@ -67,7 +70,10 @@ fn flexible_offer(item: String) {
     shipper_transmit.send(item.clone()).unwrap();
     payment_request.send(item.clone()).unwrap();
 
-    match (try_ship(buyer_recieve).join(), try_pay(payment_confirm).join()) {
+    match (
+        try_ship(buyer_recieve).join(),
+        try_pay(payment_confirm).join(),
+    ) {
         (Ok(_), Ok(_)) => println!("{:?} shipped and paid for", item),
         (Err(_), Ok(_)) => println!("Shipping failed"),
         (Ok(_), Err(_)) => println!("Payment failed"),
