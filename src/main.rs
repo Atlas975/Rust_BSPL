@@ -1,4 +1,6 @@
 #![allow(unused_macros)]
+mod protcols;
+
 use rand::random;
 use std::{collections::HashMap, sync::mpsc, thread};
 macro_rules! simulate_delay {
